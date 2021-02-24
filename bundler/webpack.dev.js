@@ -2,6 +2,7 @@ const { merge } = require('webpack-merge')
 const commonConfiguration = require('./webpack.common.js')
 const ip = require('internal-ip')
 const portFinderSync = require('portfinder-sync')
+const { FlatShading } = require('three')
 
 const infoColor = (_message) =>
 {
@@ -16,10 +17,12 @@ module.exports = merge(
         {
             host: '0.0.0.0',
             port: portFinderSync.getPort(8080),
-            contentBase: './dist',
+            contentBase: './docs',
             watchContentBase: true,
             open: true,
-            https: false,
+            https: true,
+            key: './cert/localhost-key.pem',
+            cert: './cert/localhost-cert.pem',
             useLocalIp: true,
             disableHostCheck: true,
             overlay: true,

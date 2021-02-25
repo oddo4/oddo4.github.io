@@ -1,13 +1,16 @@
 import './style.css'
 
 import * as THREE from 'three';
-import * as dat from 'dat.gui'
+// import * as dat from 'dat.gui'
 import CANNON from 'cannon'
+// import typefaceFont from 'three/examples/fonts/helvetiker_regular.typeface.json'
 
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
-import { AxesHelper, Mesh } from 'three';
+// import { AxesHelper, Mesh } from 'three';
 
+/*
 //#region Debug
 const gui = new dat.GUI()
 const debugObject = {}
@@ -22,90 +25,39 @@ debugObject.createBullet = () => {
         }
     )
 }
-debugObject.createBox = () => {
-    createBox(
-        Math.random(),
-        Math.random(),
-        Math.random(),
-        { 
-            x: (Math.random() * 0.5) * 3, 
-            y: 3, 
-            z: ((Math.random() * 0.5) * 3) - 3
-        }
-    )
-}
+// debugObject.createBox = () => {
+//     createBox(
+//         Math.random(),
+//         Math.random(),
+//         Math.random(),
+//         { 
+//             x: (Math.random() * 0.5) * 3, 
+//             y: 3, 
+//             z: ((Math.random() * 0.5) * 3) - 3
+//         }
+//     )
+// }
 debugObject.spawnEnemy = () => {
-    createEnemy(
-        0.5,
-        1.8,
-        0.5,
-        { 
-            x: ((Math.random() - 0.5) * 10), 
-            y: 0.9, 
-            z: ((Math.random() - 0.5) * 10)
-        }
-    )
+    spawnEnemy()
+}
+debugObject.startEnemySpawn = () => {
+    startSpawning()
+}
+debugObject.stopEnemySpawn = () => {
+    stopSpawning()
 }
 debugObject.reset = () => {
-    for (const object of objectsToUpdate) {
-        // Remove body
-        object.body.removeEventListener('collide', playHitSound)
-        world.removeBody(object.body)
-
-        // Remove mesh
-        scene.remove(object.mesh)
-        objectsToUpdate.splice(objectsToUpdate.indexOf(object), 1)
-    }
-    for (const enemy of enemyObjectsToUpdate) {
-        // Remove body
-        enemy.body.removeEventListener('collide', playHitSound)
-        world.removeBody(enemy.body)
-
-        // Remove mesh
-        scene.remove(enemy.mesh)
-        enemyObjectsToUpdate.splice(enemyObjectsToUpdate.indexOf(enemy), 1)
-    }
+    clearObjects()
+    clearEnemyObjects()
 }
 gui.add(debugObject, 'createBullet')
-gui.add(debugObject, 'createBox')
+// gui.add(debugObject, 'createBox')
 gui.add(debugObject, 'spawnEnemy')
+gui.add(debugObject, 'startEnemySpawn')
+gui.add(debugObject, 'stopEnemySpawn')
 gui.add(debugObject, 'reset')
 //#endregion Debug
-
-//#region Sounds
-const hitSound = new Audio('/sounds/hit.mp3')
-
-function playHitSound(collision) {
-    const impactStrength = collision.contact.getImpactVelocityAlongNormal()
-
-    if (impactStrength > 1.5) {
-        let soundVolume = 0
-        if (impactStrength > 1.5 + 5) {
-            soundVolume = 1
-        }
-        else {
-            soundVolume = Math.random() * ((impactStrength - 1.5) / 5)
-        }
-        hitSound.volume = soundVolume
-        hitSound.currentTime = 0
-        hitSound.play()
-    }
-}
-//#endregion Sounds
-
-//#region Textures
-const textureLoader = new THREE.TextureLoader()
-const cubeTextureLoader = new THREE.CubeTextureLoader()
-
-const environmentMapTexture = cubeTextureLoader.load([
-    '/textures/environmentMaps/0/px.png',
-    '/textures/environmentMaps/0/nx.png',
-    '/textures/environmentMaps/0/py.png',
-    '/textures/environmentMaps/0/ny.png',
-    '/textures/environmentMaps/0/pz.png',
-    '/textures/environmentMaps/0/nz.png'
-])
-//#endregion Textures
+//*/
 
 //#region Physics
 // World
@@ -119,6 +71,7 @@ const defaultPhysicsMaterial = new CANNON.Material('default')
 const playerPhysicsMaterial = new CANNON.Material('player')
 const enemyPhysicsMaterial = new CANNON.Material('enemy')
 const bulletPhysicsMaterial = new CANNON.Material('bullet')
+const textPhysicsMaterial = new CANNON.Material('text')
 
 // Default contact material
 const defaultPhysicsContactMaterial = new CANNON.ContactMaterial(
@@ -153,11 +106,22 @@ const enemyBulletPhysicsContactMaterial = new CANNON.ContactMaterial(
 )
 world.addContactMaterial(enemyBulletPhysicsContactMaterial)
 
+// Bullet/Text contact material
+const bulletTextPhysicsContactMaterial = new CANNON.ContactMaterial(
+    bulletPhysicsMaterial, 
+    textPhysicsMaterial, 
+    {
+        friction: 1,
+        restitution: 0
+    }
+)
+world.addContactMaterial(bulletTextPhysicsContactMaterial)
+
 /// Colliders
 // Player
-const playerShape = new CANNON.Cylinder(0.15, 0.15, 1.8, 24)
+const playerShape = new CANNON.Cylinder(0.15, 0.15, 1.8, 12)
 const playerBody = new CANNON.Body({
-    mass: 0, // object static
+    mass: 1, // object static
     shape: playerShape,
     material: playerPhysicsMaterial
 })
@@ -178,6 +142,146 @@ floorBody.quaternion.setFromAxisAngle(
 world.addBody(floorBody)
 //#endregion Physics
 
+//#region Models
+const gltfLoader = new GLTFLoader()
+let empusaModel = new THREE.Group()
+
+function loadModels() {
+    gltfLoader.load(
+        '/models/empusa/empusa.gltf',
+        (gltf) =>
+        {
+            let dummy = new THREE.Object3D()
+            gltf.scene.traverse((child) => {
+                if (child.isMesh) {
+                    let instancedMesh = new THREE.InstancedMesh(child.geometry, child.material, 1);
+                    instancedMesh.setMatrixAt(0, dummy.matrix);
+                    instancedMesh.castShadow = true
+                    instancedMesh.scale.set(2, 2, 2)
+                    empusaModel.add(instancedMesh);
+                }
+            })
+            
+            init();
+            animate();
+        }
+        // (progress) =>
+        // {
+        //     console.log(progress)
+        // },
+        // (error) =>
+        // {
+        //     console.log(error)
+        // }
+    )    
+}
+
+//#endregion
+
+//#region Fonts
+const fontLoader = new THREE.FontLoader()
+let easyModeText, hardModeText, easyModeBody, hardModeBody
+fontLoader.load(
+    '/fonts/helvetiker_regular.typeface.json',
+    (font) =>
+    {
+        const easyTextGeometry = new THREE.TextGeometry(
+            'Dead Weight\n      Mode',
+            {
+                font: font,
+                size: 0.2,
+                height: 0.2,
+                curveSegments: 8,
+                bevelEnabled: false,
+            }
+        )
+        easyTextGeometry.center()
+
+        const easyTextMaterial = new THREE.MeshBasicMaterial()
+        easyModeText = new THREE.Mesh(easyTextGeometry, easyTextMaterial)
+        easyModeText.position.set(-1.5, 2, -2)
+        easyModeText.rotation.reorder('YXZ')
+        easyModeText.rotation.y = 20 * ((Math.PI * 2) / 360)
+        easyModeText.rotation.x = 5 * ((Math.PI * 2) / 360)
+        
+        const easyTextBox = easyTextGeometry.boundingBox.max
+        const easyTextShape = new CANNON.Box(new CANNON.Vec3(easyTextBox.x, easyTextBox.y, easyTextBox.z))
+        easyModeBody = new CANNON.Body({
+            mass: 0,
+            shape: easyTextShape,
+            material: textPhysicsMaterial
+        })
+        easyModeBody.position.copy(easyModeText.position)
+        easyModeBody.quaternion.copy(easyModeText.quaternion)
+        easyModeBody.addEventListener('collide', startEasyMode)
+        world.addBody(easyModeBody)
+
+        const hardTextGeometry = new THREE.TextGeometry(
+            'Wacky Woohoo\n     Pizza Man\n        Mode',
+            {
+                font: font,
+                size: 0.2,
+                height: 0.2,
+                curveSegments: 8,
+                bevelEnabled: false
+            }
+        )
+        hardTextGeometry.center()
+        const hardTextMaterial = new THREE.MeshBasicMaterial()
+        hardModeText = new THREE.Mesh(hardTextGeometry, hardTextMaterial)
+        hardModeText.position.set(1.5, 2, -2)
+        hardModeText.rotation.reorder('YXZ')
+        hardModeText.rotation.y = -20 * ((Math.PI * 2) / 360)
+        hardModeText.rotation.x = 5 * ((Math.PI * 2) / 360)
+        
+        const hardTextBox = hardTextGeometry.boundingBox.max
+        const hardTextShape = new CANNON.Box(new CANNON.Vec3(hardTextBox.x, hardTextBox.y, hardTextBox.z))
+        hardModeBody = new CANNON.Body({
+            mass: 0,
+            shape: hardTextShape,
+            material: textPhysicsMaterial
+        })
+        hardModeBody.position.copy(hardModeText.position)
+        hardModeBody.quaternion.copy(hardModeText.quaternion)
+        hardModeBody.addEventListener('collide', startHardMode)
+        world.addBody(hardModeBody)
+    }
+)
+//#endregion
+
+//#region Sounds
+const hitSound = new Audio('/sounds/hit.mp3')
+const gunShotSound = new Audio('/sounds/gun_shot.mp3')
+const allRightSound = new Audio('/sounds/all_right.mp3')
+const showdownSound = new Audio('/sounds/showdown.mp3')
+const deathSound = new Audio('/sounds/death.mp3')
+
+function playHitSound(collision) {
+    playSound(hitSound, 0.3)
+}
+
+function playSound(sound, soundVolume) {
+    sound.volume = soundVolume
+    sound.currentTime = 0
+    sound.play()
+}
+
+//#endregion Sounds
+
+//#region Textures
+const textureLoader = new THREE.TextureLoader()
+const cubeTextureLoader = new THREE.CubeTextureLoader()
+
+const environmentMapTexture = cubeTextureLoader.load([
+    '/textures/environmentMaps/0/px.png',
+    '/textures/environmentMaps/0/nx.png',
+    '/textures/environmentMaps/0/py.png',
+    '/textures/environmentMaps/0/ny.png',
+    '/textures/environmentMaps/0/pz.png',
+    '/textures/environmentMaps/0/nz.png'
+])
+//#endregion Textures
+
 //#region Utils
 const objectsToUpdate = []
 const enemyObjectsToUpdate = []
@@ -188,18 +292,32 @@ const defaultMaterial = new THREE.MeshStandardMaterial({
     envMap: environmentMapTexture
 })
 
+const bulletMaterial = new THREE.MeshStandardMaterial({
+    color: '#b09e3a',
+    metalness: 0.9,
+    roughness: 0.5,
+    envMap: environmentMapTexture
+})
+
+const enemyMaterial = new THREE.MeshStandardMaterial({
+    color: '#050505',
+    metalness: 0.2,
+    roughness: 0.7,
+    envMap: environmentMapTexture
+})
+
 // Bullet
 const sphereGeometry = new THREE.SphereBufferGeometry(1, 20, 20)
 function createBullet(radius, position) {
     // Three.js mesh
-    const mesh = new THREE.Mesh(sphereGeometry, defaultMaterial)
+    const mesh = new THREE.Mesh(sphereGeometry, bulletMaterial)
     mesh.scale.set(radius, radius, radius)
     mesh.castShadow = true
     mesh.position.copy(position)
     scene.add(mesh)
 
     // Cannon.js body
-    const shape = new CANNON.Sphere(radius * 2)
+    const shape = new CANNON.Sphere(radius * 2.5)
     const body = new CANNON.Body({
         mass: 0.5,
         position: new CANNON.Vec3(0, 3, 0),
@@ -225,64 +343,78 @@ function createBullet(radius, position) {
 
 // Box
 const boxGeometry = new THREE.BoxBufferGeometry(1, 1, 1)
-function createBox(width, height, depth, position) {
-    // Three.js mesh
-    const mesh = new THREE.Mesh(boxGeometry, defaultMaterial)
-    mesh.scale.set(width, height, depth)
-    mesh.castShadow = true
-    mesh.position.copy(position)
-    scene.add(mesh)
+// function createBox(width, height, depth, position) {
+//     // Three.js mesh
+//     const mesh = new THREE.Mesh(boxGeometry, defaultMaterial)
+//     mesh.scale.set(width, height, depth)
+//     mesh.castShadow = true
+//     mesh.position.copy(position)
+//     scene.add(mesh)
 
-    // Cannon.js body
-    const shape = new CANNON.Box(new CANNON.Vec3(width * 0.5, height * 0.5, depth * 0.5))
-    const body = new CANNON.Body({
-        mass: 1,
-        position: new CANNON.Vec3(0, 3, 0),
-        shape: shape,
-        material: defaultPhysicsMaterial
-    })
-    body.position.copy(position)
-    body.addEventListener('collide', playHitSound)
-    world.addBody(body)
+//     // Cannon.js body
+//     const shape = new CANNON.Box(new CANNON.Vec3(width * 0.5, height * 0.5, depth * 0.5))
+//     const body = new CANNON.Body({
+//         mass: 1,
+//         position: new CANNON.Vec3(0, 3, 0),
+//         shape: shape,
+//         material: defaultPhysicsMaterial
+//     })
+//     body.position.copy(position)
+//     body.addEventListener('collide', playHitSound)
+//     world.addBody(body)
 
-    let object = {
-        mesh: mesh,
-        body: body
-    }
+//     let object = {
+//         mesh: mesh,
+//         body: body
+//     }
 
-    // Save in objectsToUpdate
-    objectsToUpdate.push(object)
+//     // Save in objectsToUpdate
+//     objectsToUpdate.push(object)
 
-    return object;
-}
+//     return object;
+// }
 
 function createEnemy(width, height, depth, position) {
+    let dummy = new THREE.Object3D();
+
     // Three.js mesh
-    const mesh = new THREE.Mesh(boxGeometry, defaultMaterial)
-    mesh.scale.set(width, height, depth)
-    mesh.castShadow = true
-    mesh.position.copy(position)
-    scene.add(mesh)
+    // const mesh = new THREE.Mesh(boxGeometry, enemyMaterial)
+    // mesh.scale.set(width, height, depth)
+    // mesh.castShadow = true
+    // mesh.position.copy(position)
+    let modelGroup = new THREE.Group()
+    modelGroup.copy(empusaModel)
+    modelGroup.position.copy(position)
+    scene.add(modelGroup)
+
+    // const hitboxMesh = new THREE.Mesh(boxGeometry, enemyMaterial)
+    // hitboxMesh.scale.set(width, height, depth)
+    // hitboxMesh.castShadow = true
+    // hitboxMesh.position.copy(position)
+    // hitboxMesh.position.y = height / 2
+    // scene.add(hitboxMesh)
 
     // Cannon.js body
     const shape = new CANNON.Box(new CANNON.Vec3(width * 0.5, height * 0.5, depth * 0.5))
     const body = new CANNON.Body({
         mass: 0,
-        position: new CANNON.Vec3(0, 3, 0),
+        position: new CANNON.Vec3(0, 0, 0),
         shape: shape,
         material: enemyPhysicsMaterial
     })
     body.position.copy(position)
-    body.addEventListener('collide', playHitSound)
+    body.position.y = height * 0.5
     world.addBody(body)
 
     let object = {
-        mesh: mesh,
-        body: body
+        mesh: modelGroup,
+        body: body,
+        speed: (0.01 * gameSpeed) * (Math.max(0.1, Math.random()))
+        // hitbox: hitboxMesh
     }
 
-    const axesHelper = new THREE.AxesHelper(1)
-    mesh.add(axesHelper)
+    // const axesHelper = new THREE.AxesHelper(1)
+    // mesh.add(axesHelper)
 
     // Save in enemyObjectsToUpdate
     enemyObjectsToUpdate.push(object)
@@ -291,29 +423,23 @@ function createEnemy(width, height, depth, position) {
 }
 
 function bulletOnHit(collision) {
-    collision.target.removeEventListener('collide', bulletOnHit)
     collision.target.removeEventListener('collide', playHitSound)
-
-    let velocity = new CANNON.Vec3()
-    velocity.copy(collision.target.velocity)
-    velocity.normalize()
+    collision.target.removeEventListener('collide', bulletOnHit)
 
     let object = objectsToUpdate.find(obj => obj.body === collision.target)
     object.body.applyImpulse(new CANNON.Vec3(), object.body.position)
     objectsToUpdate.splice(objectsToUpdate.indexOf(object), 1)
-    //collision.body.applyForce(velocity, collision.body.position)
     
     // Remove mesh
     scene.remove(object.mesh)
     // Remove body, delayed to avoid errors
     setTimeout(() => { world.removeBody(object.body) }, 500)
+    let enemy = enemyObjectsToUpdate.find(obj => obj.body === collision.body)
 
     // check if hitted enemy
-    if (collision.body.material.name == "enemy") {
-        console.log('enemy hit')
-        collision.body.removeEventListener('collide', playHitSound)
-        let enemy = enemyObjectsToUpdate.find(obj => obj.body === collision.body)
-
+    if (enemy != null && collision.body.material.name == "enemy") {
+        // console.log('enemy hit')
+        enemyObjectsToUpdate.splice(enemyObjectsToUpdate.indexOf(enemy), 1)
         // Remove mesh
         scene.remove(enemy.mesh)
         // Remove body, delayed to avoid errors
@@ -321,7 +447,25 @@ function bulletOnHit(collision) {
     }
 }
 
-function createGunModel(controllerGrip) {
+// function checkCollideWithPlayer(collision) {
+//     // check if hitted player
+//     if (collision.body.material.name == "player") {
+//         collision.target.removeEventListener('collide', checkCollideWithPlayer)
+//         stopSpawning()
+//         console.log('player dead')
+//     }
+// }
+
+function checkCollideWithEnemy(collision) {
+    // check if hitted enemy
+    if (collision.body.material.name == "enemy") {
+        collision.target.removeEventListener('collide', checkCollideWithEnemy)
+        stopSpawning()
+        gameOver()
+    }
+}
+
+function createGunModel(controllerGrip, color) {
     const group = new THREE.Group()
     group.rotation.set(
         -60 * ((Math.PI * 2) / 360), 
@@ -329,10 +473,15 @@ function createGunModel(controllerGrip) {
         0
     )
     const meshBarrel = new THREE.Mesh(
-        new THREE.BoxBufferGeometry(0.02, 0.025, 0.1),
-        defaultMaterial
+        new THREE.BoxBufferGeometry(0.02, 0.035, 0.15),
+        new THREE.MeshStandardMaterial({
+            color: color,
+            metalness: 0.9,
+            roughness: 0.4,
+            envMap: environmentMapTexture
+        })
     )
-    meshBarrel.position.set(0, 0.025, -0.08)
+    meshBarrel.position.set(0, 0.025, -0.13)
     meshBarrel.rotation.set(0, 0, 0)
     group.add(meshBarrel)
 
@@ -345,17 +494,19 @@ function createGunModel(controllerGrip) {
 }
 
 function spawnEnemy() {
-    console.log('spawned enemy')
-    createEnemy(
-        0.5,
-        1.8,
-        0.5,
-        { 
-            x: ((Math.random() - 0.5) * 20), 
-            y: 0.9, 
-            z: ((Math.random() - 0.5) * 20)
-        }
-    )
+    if (enemyObjectsToUpdate.length < 20) {
+        createEnemy(
+            0.75,
+            2.25,
+            0.75,
+            { 
+                x: Math.round(Math.random()) == 0 ? (Math.min(-2, -(Math.random() * 10))) : (Math.max(2, (Math.random() * 10))),
+                y: 0, 
+                z: Math.round(Math.random()) == 0 ? (Math.min(-2, -(Math.random() * 10))) : (Math.max(2, (Math.random() * 10)))
+            }
+        )
+        console.log(enemyObjectsToUpdate.length)
+    }
 }
 //#endregion Utils
 
@@ -367,12 +518,22 @@ let controllerGrip1, controllerGrip2;
 const clock = new THREE.Clock();
 let oldElapsedTime = 0
 
-init();
-animate();
+const playerMesh = new THREE.Mesh(
+    new THREE.CylinderBufferGeometry(0.15, 0.15, 0.1, 12),
+    new THREE.MeshStandardMaterial({
+        color: '#550000',
+        metalness: 0.9,
+        roughness: 0.4,
+        envMap: environmentMapTexture
+    })
+)
+playerMesh.position.y = 0.05
+
+loadModels();
 
 function init() {
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x505050);
+    scene.background = new THREE.Color('#38151d');  
 
     camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
     camera.position.set( 0, 1.6, 3 );
@@ -380,8 +541,8 @@ function init() {
     const floor = new THREE.Mesh(
         new THREE.PlaneGeometry(100, 100),
         new THREE.MeshStandardMaterial({
-            color: '#777777',
-            metalness: 0.3,
+            color: '#912c34',
+            metalness: 0.9,
             roughness: 0.4,
             envMap: environmentMapTexture
         })
@@ -390,10 +551,10 @@ function init() {
     floor.rotation.x = - Math.PI * 0.5
     scene.add(floor)
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8)
     scene.add(ambientLight)
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.2)
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6)
     directionalLight.castShadow = true
     directionalLight.shadow.mapSize.set(1024, 1024)
     directionalLight.shadow.camera.far = 15
@@ -420,6 +581,7 @@ function init() {
         this.userData.controllerGrip.children[1].getWorldQuaternion(quaternion)
         instance.body.quaternion.copy(quaternion)
         instance.body.applyLocalForce(new CANNON.Vec3(0, 0, -1000), instance.body.position)
+        playSound(gunShotSound, 0.5)
     }
 
     function onSelectEnd() {
@@ -427,6 +589,7 @@ function init() {
     }
     function onSqueezeStart() {
         this.userData.isSqueezing = true
+        // startSpawning()
     }
 
     function onSqueezeEnd() {
@@ -470,18 +633,22 @@ function init() {
 
     controllerGrip1 = renderer.xr.getControllerGrip(0);
     controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
-    controllerGrip1.add(createGunModel(controllerGrip1))
+    controllerGrip1.add(createGunModel(controllerGrip1, '#020202'))
     controller1.userData.controllerGrip = controllerGrip1
     scene.add(controllerGrip1);
 
     controllerGrip2 = renderer.xr.getControllerGrip(1);
     controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
     controller2.userData.controllerGrip = controllerGrip2
-    controllerGrip2.add(createGunModel(controllerGrip2))
+    controllerGrip2.add(createGunModel(controllerGrip2, '#333333'))
 
     scene.add(controllerGrip2);
 
     window.addEventListener('resize', onWindowResize);
+
+    scene.add(playerMesh)
+    scene.add(easyModeText)
+    scene.add(hardModeText)
 }
 
 function buildController(data) {
@@ -535,9 +702,88 @@ function animate() {
     renderer.setAnimationLoop(render);
 }
 
-const lastPos = new THREE.Vector3()
+let gameSpeed = 1
 
-setInterval(() => { spawnEnemy() }, 2000)
+function startEasyMode(collision) {
+    if (!spawnStarted) {
+        // console.log('easy start')
+        easyModeText.visible = false
+        hardModeText.visible = false
+        gameSpeed = 2
+        startSpawning(2000)
+        playSound(allRightSound, 0.5)
+    }
+}
+
+function startHardMode(collision) {
+    if (!spawnStarted) {
+        // console.log('hard start')
+        easyModeText.visible = false
+        hardModeText.visible = false
+        gameSpeed = 3
+        startSpawning(500)
+        playSound(showdownSound, 0.5)
+    }
+}
+
+function gameOver() {
+    // console.log('game over')
+    playSound(deathSound, 0.5)
+    easyModeText.visible = true
+    hardModeText.visible = true
+}
+
+let spawnInterval = null
+let spawnStarted = false
+
+function startSpawning(interval) {
+    if (!spawnStarted) {
+        // console.log('spawn started')
+        playerBody.addEventListener('collide', checkCollideWithEnemy)
+        spawnInterval = setInterval(() => { spawnEnemy() }, interval)
+        spawnStarted = true
+    }
+}
+
+function stopSpawning() {
+    if (spawnInterval != null) {
+        // console.log('spawn ended')
+        clearInterval(spawnInterval)
+        clearEnemyObjects()
+        spawnStarted = false
+        spawnInterval = null
+    }
+}
+
+function clearObjects() {
+    while (objectsToUpdate.length > 0) {
+        for (let i = 0; i < objectsToUpdate.length; i++) {
+            const object = objectsToUpdate[i];
+            objectsToUpdate.splice(i, 1)
+            // Remove mesh
+            scene.remove(object.mesh)
+    
+            // Remove body
+            object.body.removeEventListener('collide', playHitSound)
+            setTimeout(() => { world.removeBody(object.body) }, 500)
+        }
+    }
+}
+
+function clearEnemyObjects() {
+    while (enemyObjectsToUpdate.length > 0) {
+        for (let i = 0; i < enemyObjectsToUpdate.length; i++) {
+            const enemy = enemyObjectsToUpdate[i];
+            enemyObjectsToUpdate.splice(i, 1)
+            // Remove mesh
+            scene.remove(enemy.mesh)
+    
+            // Remove body
+            // enemy.body.removeEventListener('collide', checkCollideWithPlayer)
+            setTimeout(() => { world.removeBody(enemy.body) }, 500)
+        }
+    }
+}
 
 function render() {
     handleController(controller1);
@@ -556,7 +802,16 @@ function render() {
     world.step(1 / 60, deltaTime, 3)
 
     playerBody.position.x = camera.position.x
+    playerBody.position.y = 0.9
     playerBody.position.z = camera.position.z
+
+    playerMesh.position.copy(playerBody.position)
+    
+    // easyModeText.position.copy(easyModeBody.position)
+    // easyModeText.quaternion.copy(easyModeBody.quaternion)
+
+    // hardModeText.position.copy(hardModeBody.position)
+    // hardModeText.quaternion.copy(hardModeBody.quaternion)
 
     for (const object of objectsToUpdate) {
         object.mesh.position.copy(object.body.position)
@@ -574,9 +829,10 @@ function render() {
         
         const dir = new THREE.Vector3().subVectors(cameraPos, enemyPos)
         dir.normalize()
-        //console.log(dir)
-        enemy.mesh.position.add(dir.multiplyScalar(0.01))
+
+        enemy.mesh.position.add(dir.multiplyScalar(enemy.speed))
         enemy.body.position.copy(enemy.mesh.position)
+        enemy.body.position.y = enemy.body.shapes[0].halfExtents.y
     }
 
     renderer.render(scene, camera);

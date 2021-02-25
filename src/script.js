@@ -266,19 +266,10 @@ function playHitSound(collision) {
     playSound(hitSound, 0.3)
 }
 
-function playSound(sound, soundVolume) {
+async function playSound(sound, soundVolume) {
     sound.volume = soundVolume
     sound.currentTime = 0
-    let playPromise = sound.play()
-
-    if (playPromise !== undefined) {
-        playPromise.then(function() {
-            // Automatic playback started!      
-        }).catch(function(error) {
-            // Automatic playback failed.
-            // Show a UI element to let the user manually start playback.
-        });
-    }
+    await sound.play()
 }
 
 //#endregion Sounds

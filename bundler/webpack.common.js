@@ -70,6 +70,21 @@ module.exports = {
                 ]
             },
 
+            // Sounds
+            {
+                test: /\.(mp3)$/,
+                use:
+                [
+                    {
+                        loader: 'file-loader',
+                        options:
+                        {
+                            outputPath: 'assets/sounds/'
+                        }
+                    }
+                ]
+            },
+
             // Fonts
             {
                 test: /\.(ttf|eot|woff|woff2)$/,

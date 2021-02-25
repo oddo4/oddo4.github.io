@@ -256,6 +256,12 @@ const allRightSound = new Audio('/sounds/all_right.mp3')
 const showdownSound = new Audio('/sounds/showdown.mp3')
 const deathSound = new Audio('/sounds/death.mp3')
 
+hitSound.load()
+gunShotSound.load()
+allRightSound.load()
+showdownSound.load()
+deathSound.load()
+
 function playHitSound(collision) {
     playSound(hitSound, 0.3)
 }

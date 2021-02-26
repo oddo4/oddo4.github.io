@@ -256,6 +256,12 @@ const allRightSound = new Audio('/sounds/all_right.mp3')
 const showdownSound = new Audio('/sounds/showdown.mp3')
 const deathSound = new Audio('/sounds/death.mp3')
 
+hitSound.crossOrigin = 'anonymous'
+gunShotSound.crossOrigin = 'anonymous'
+allRightSound.crossOrigin = 'anonymous'
+showdownSound.crossOrigin = 'anonymous'
+deathSound.crossOrigin = 'anonymous'
+
 hitSound.load()
 gunShotSound.load()
 allRightSound.load()
@@ -266,10 +272,10 @@ function playHitSound(collision) {
     playSound(hitSound, 0.3)
 }
 
-async function playSound(sound, soundVolume) {
+function playSound(sound, soundVolume) {
     sound.volume = soundVolume
     sound.currentTime = 0
-    await sound.play()
+    sound.play()
 }
 
 //#endregion Sounds

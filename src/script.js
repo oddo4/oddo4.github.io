@@ -256,11 +256,11 @@ const allRightSound = new Audio('/sounds/all_right.mp3')
 const showdownSound = new Audio('/sounds/showdown.mp3')
 const deathSound = new Audio('/sounds/death.mp3')
 
-hitSound.type = 'audip/mpeg'
-gunShotSound.type = 'audip/mpeg'
-allRightSound.type = 'audip/mpeg'
-showdownSound.type = 'audip/mpeg'
-deathSound.type = 'audip/mpeg'
+hitSound.type = 'audio/mpeg'
+gunShotSound.type = 'audio/mpeg'
+allRightSound.type = 'audio/mpeg'
+showdownSound.type = 'audio/mpeg'
+deathSound.type = 'audio/mpeg'
 
 hitSound.load()
 gunShotSound.load()

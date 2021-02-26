@@ -256,12 +256,6 @@ const allRightSound = new Audio('/sounds/all_right.mp3')
 const showdownSound = new Audio('/sounds/showdown.mp3')
 const deathSound = new Audio('/sounds/death.mp3')
 
-hitSound.type = 'audio/mpeg'
-gunShotSound.type = 'audio/mpeg'
-allRightSound.type = 'audio/mpeg'
-showdownSound.type = 'audio/mpeg'
-deathSound.type = 'audio/mpeg'
-
 hitSound.load()
 gunShotSound.load()
 allRightSound.load()
@@ -280,7 +274,7 @@ function playSound(sound, soundVolume) {
     if (promise !== undefined) {
         promise.then(function() {
             // Automatic playback started!
-            console.log('auido played')
+            console.log('audio played')
         }).catch(function(error) {
             // Automatic playback failed.
             // Show a UI element to let the user manually start playback.

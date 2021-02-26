@@ -256,11 +256,11 @@ const allRightSound = new Audio('/sounds/all_right.mp3')
 const showdownSound = new Audio('/sounds/showdown.mp3')
 const deathSound = new Audio('/sounds/death.mp3')
 
-hitSound.crossOrigin = 'anonymous'
-gunShotSound.crossOrigin = 'anonymous'
-allRightSound.crossOrigin = 'anonymous'
-showdownSound.crossOrigin = 'anonymous'
-deathSound.crossOrigin = 'anonymous'
+hitSound.type = 'audip/mpeg'
+gunShotSound.type = 'audip/mpeg'
+allRightSound.type = 'audip/mpeg'
+showdownSound.type = 'audip/mpeg'
+deathSound.type = 'audip/mpeg'
 
 hitSound.load()
 gunShotSound.load()
@@ -275,7 +275,18 @@ function playHitSound(collision) {
 function playSound(sound, soundVolume) {
     sound.volume = soundVolume
     sound.currentTime = 0
-    sound.play()
+    var promise = sound.play()
+
+    if (promise !== undefined) {
+        promise.then(function() {
+            // Automatic playback started!
+            console.log('auido played')
+        }).catch(function(error) {
+            // Automatic playback failed.
+            // Show a UI element to let the user manually start playback.
+            console.log(error)
+        });
+    }
 }
 
 //#endregion Sounds

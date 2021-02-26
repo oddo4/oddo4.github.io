@@ -250,17 +250,11 @@ fontLoader.load(
 //#endregion
 
 //#region Sounds
-const hitSound = new Audio('/sounds/hit.mp3')
-const gunShotSound = new Audio('/sounds/gun_shot.mp3')
-const allRightSound = new Audio('/sounds/all_right.mp3')
-const showdownSound = new Audio('/sounds/showdown.mp3')
-const deathSound = new Audio('/sounds/death.mp3')
-
-hitSound.load()
-gunShotSound.load()
-allRightSound.load()
-showdownSound.load()
-deathSound.load()
+const hitSound = new Audio('/sounds/hit.ogg')
+const gunShotSound = new Audio('/sounds/gun_shot.ogg')
+const allRightSound = new Audio('/sounds/all_right.ogg')
+const showdownSound = new Audio('/sounds/showdown.ogg')
+const deathSound = new Audio('/sounds/death.ogg')
 
 function playHitSound(collision) {
     playSound(hitSound, 0.3)

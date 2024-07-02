@@ -10,15 +10,25 @@
     <div id="oauth"></div>
 
     <template id="login">
-        <h1>Welcome to the OAuth2 PKCE Example</h1>
+        <h1>Spotify Tool</h1>
         <button id="login-button" data-bind-onclick="loginWithSpotifyClick();"> Log in with Spotify </button>
     </template>
 
     <template id="logged-in-template">
         <h1>Logged in as <span data-bind="display_name"></span></h1>
-        <img width="150" data-bind-src="images[0].url" data-bind-alt="display_name" />
-        <button id="refresh-token-button" data-bind-onclick="refreshTokenClick();">Refresh Token</button>
-        <button id="logout-button" data-bind-onclick="logoutClick();">Log out</button>
+        <div>
+            <button id="refresh-token-button" data-bind-onclick="refreshTokenClick();">Refresh Token</button>
+            <button id="logout-button" data-bind-onclick="logoutClick();">Log out</button>
+        </div>
+        <div>
+            <input type="text" id="artist-id-input" placeholder="Insert Artist ID here..."><br>
+            <button id="add-artist-button" data-bind-onclick="addArtistClick();">Add Artist</button>
+        </div>
+        <div>
+            <h2>List of artists</h2>
+            <ul id="artists-list">
+            </ul>
+        </div>
     </template>
 
     <template id="oauth-template">

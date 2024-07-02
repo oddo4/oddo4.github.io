@@ -1,6 +1,8 @@
 body {
     margin: 1rem;
     font-family: Arial, Helvetica, sans-serif;
+    color: #fff;
+    background-color: #121212;
 }
 
 tr:nth-child(even) {
@@ -24,14 +26,37 @@ button {
     padding: 10px 3rem;
     font-size: 0.8rem;
     font-family: Arial, Helvetica, sans-serif;
-    text-transform: uppercase;
-    font-weight: bold;
+    font-weight: 750;
+    text-transform: capitalize;
     background-color:#1ed760;
-    color: black;
+    color: #000;
 }
 
 button:hover {
     background-color: #1fdf64;
+    transform: scale(1.05)
+}
+
+input[type=text] {
+    margin: 1rem 1rem 0 0;
+    min-width: 340px;
+    border: 0;
+    border-radius: 30px;
+    padding: 15px 1rem;
+    font-size: 0.8rem;
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: 600;
+    background-color: #242424;
+    color: #fff;
+    outline: none;
+}
+
+input[type=text]:hover {
+    background-color: #2a2a2a;
+}
+
+input[type=text]:focus {
+    border: 1px solid #fff;
 }
 
 #logged-in {

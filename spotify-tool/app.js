@@ -1,9 +1,9 @@
 const clientId = '260263b1f55c4d6e850c2fe3cab1bb59'; // your clientId
-const redirectUrl = 'https://oddo4.github.io/spotify-tool/';        // your redirect URL - must be localhost URL and/or HTTPS
+const redirectUrl = 'http://localhost:5500/spotify-tool/'; // https://oddo4.github.io/spotify-tool/
 
 const authorizationEndpoint = "https://accounts.spotify.com/authorize";
 const tokenEndpoint = "https://accounts.spotify.com/api/token";
-const scope = 'user-read-private user-read-email';
+const scope = 'user-read-private user-read-email user-follow-read';
 
 // Data structure that manages the current active token, caching it in localStorage
 const currentToken = {
@@ -13,6 +13,7 @@ const currentToken = {
   get expires() { return localStorage.getItem('expires') || null },
 
   save: function (response) {
+    console.log(response);
     const { access_token, refresh_token, expires_in } = response;
     localStorage.setItem('access_token', access_token);
     localStorage.setItem('refresh_token', refresh_token);
@@ -43,9 +44,17 @@ if (code) {
 
 // If we have a token, we're logged in, so fetch user data and render logged in template
 if (currentToken.access_token) {
+  let now = new Date();
+  let expiry = new Date(currentToken.expires);
+  if (now.getTime() > expiry.getTime()) {
+    logoutClick();
+  }
+
+  const token = await refreshToken();
+  currentToken.save(token);
+
   const userData = await getUserData();
   renderTemplate("main", "logged-in-template", userData);
-  // renderTemplate("oauth", "oauth-template", currentToken);
 }
 
 // Otherwise we're not logged in, so render the login template
@@ -129,6 +138,21 @@ async function getUserData() {
   return await response.json();
 }
 
+async function getArtist(artistId) {
+  const response = await fetch("https://api.spotify.com/v1/artists/" + artistId, {
+    method: 'GET',
+    headers: { 'Authorization': 'Bearer ' + currentToken.access_token },
+  });
+
+  if (response.ok) {
+    return await response.json();
+  }
+  else {
+    let errorResponse = await response.json();
+    console.log(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+  }
+}
+
 // Click handlers
 async function loginWithSpotifyClick() {
   await redirectToSpotifyAuthorize();
@@ -142,7 +166,16 @@ async function logoutClick() {
 async function refreshTokenClick() {
   const token = await refreshToken();
   currentToken.save(token);
-  // renderTemplate("oauth", "oauth-template", currentToken);
+  window.location.reload();
+}
+
+async function addArtistClick() {
+  let artistIdInput = document.getElementById("artist-id-input").value;
+  let artistDataResponse = await getArtist(artistIdInput);
+
+  if (artistDataResponse) {
+    console.log(artistDataResponse);
+  }
 }
 
 // HTML Template Rendering with basic data binding - demoware only.

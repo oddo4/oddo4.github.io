@@ -45,7 +45,7 @@ if (code) {
 if (currentToken.access_token) {
   const userData = await getUserData();
   renderTemplate("main", "logged-in-template", userData);
-  renderTemplate("oauth", "oauth-template", currentToken);
+  // renderTemplate("oauth", "oauth-template", currentToken);
 }
 
 // Otherwise we're not logged in, so render the login template
@@ -142,7 +142,7 @@ async function logoutClick() {
 async function refreshTokenClick() {
   const token = await refreshToken();
   currentToken.save(token);
-  renderTemplate("oauth", "oauth-template", currentToken);
+  // renderTemplate("oauth", "oauth-template", currentToken);
 }
 
 // HTML Template Rendering with basic data binding - demoware only.

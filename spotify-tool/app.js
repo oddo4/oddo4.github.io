@@ -13,7 +13,7 @@ const currentToken = {
   get expires() { return localStorage.getItem('expires') || null },
 
   save: function (response) {
-    console.log(response);
+    // console.log(response);
     const { access_token, refresh_token, expires_in } = response;
     localStorage.setItem('access_token', access_token);
     localStorage.setItem('refresh_token', refresh_token);
@@ -28,6 +28,9 @@ const currentToken = {
 // On page load, try to fetch auth code from current browser search URL
 const args = new URLSearchParams(window.location.search);
 const code = args.get('code');
+
+var artistsArray = [];
+var popupCallback;
 
 // If we find a code, we're in a callback, do a token exchange
 if (code) {
@@ -55,11 +58,46 @@ if (currentToken.access_token) {
 
   const userData = await getUserData();
   renderTemplate("main", "logged-in-template", userData);
+
+  let lastArtistInput = localStorage.getItem("last-artist-input");
+  if (lastArtistInput != null) {
+    document.getElementById("artist-id-input").value = lastArtistInput;
+  }
+
+  loadArtistsArrayFromLocalStorage();
+  if (artistsArray.length > 0) {
+    artistsArray.forEach((artistData) => {
+      addArtistToList(artistData);
+    });
+  }
 }
 
 // Otherwise we're not logged in, so render the login template
 if (!currentToken.access_token) {
   renderTemplate("main", "login");
+}
+
+function loadArtistsArrayFromLocalStorage() {
+  artistsArray = JSON.parse(localStorage.getItem("artists-array"));
+  if (artistsArray == null) {
+    artistsArray = [];
+  }
+
+  updateClearButtonVisibility();
+}
+
+function updateClearButtonVisibility() {
+  if (artistsArray.length > 0) {
+    document.getElementById("clear-list-button").style.visibility = "visible";
+  }
+  else {
+    document.getElementById("clear-list-button").style.visibility = "hidden";
+  }
+}
+
+function saveArtistsArrayToLocalStorage() {
+  localStorage.setItem("artists-array", JSON.stringify(artistsArray));
+  updateClearButtonVisibility();
 }
 
 async function redirectToSpotifyAuthorize() {
@@ -170,12 +208,103 @@ async function refreshTokenClick() {
 }
 
 async function addArtistClick() {
-  let artistIdInput = document.getElementById("artist-id-input").value;
-  let artistDataResponse = await getArtist(artistIdInput);
+  let artistInput = document.getElementById("artist-id-input").value.replace("https://open.spotify.com/artist/", "");
+  localStorage.setItem("last-artist-input", artistInput);
+  
+  let parseMultiInput = artistInput.replace(/\s+/g, "").split(",");
+  parseMultiInput.forEach(async (input) => {
+    let artistDataResponse = await getArtist(input);
+    if (artistDataResponse) {
+      addArtistToList(artistDataResponse);
+    }
+  });
+}
 
-  if (artistDataResponse) {
-    console.log(artistDataResponse);
+function removeArtistClick(artistId) {
+  console.log("Remove '" + artistId + "'");
+  let artistData = artistsArray.find((artist) => artist.id == artistId);
+  if (artistData == null) {
+    return;
   }
+
+  showPopup("Remove '" + artistData.name + "'?", function () {
+    artistsArray.splice(artistsArray.indexOf(artistData), 1);
+
+    let artistsList = document.getElementById("artists-list");
+    let artistElement = document.getElementById(artistData.id);
+    if (artistElement != null) {
+      artistsList.removeChild(artistElement);
+    }
+  
+    saveArtistsArrayToLocalStorage();
+  });
+}
+
+function clearListClick() {
+  showPopup("Clear list?", function () {
+    let artistElement = document.getElementById("artists-list");
+    artistElement.replaceChildren();
+    artistsArray = [];
+    saveArtistsArrayToLocalStorage();
+  });
+}
+
+function popupConfirmClick() {
+  if (popupCallback != null) {
+    popupCallback();
+  }
+
+  hidePopup();
+}
+
+function popupCancelClick() {
+  hidePopup();
+}
+
+function addArtistToList(artistData) {
+  // console.log(artistData);
+  let artistsList = document.getElementById("artists-list");
+  
+  // Check for list element
+  let artistElement = document.getElementById(artistData.id);
+  if (artistElement == null) {
+    artistElement = document.createElement("li");
+    artistElement.setAttribute("id", artistData.id);
+    artistElement.setAttribute("class", "artist-item");
+    artistElement.innerHTML = artistData.name;
+
+    let removeButton = document.createElement("button");
+    removeButton.setAttribute("class", "button-alt remove-button");
+    removeButton.addEventListener("click", function() { removeArtistClick(artistData.id); });
+    removeButton.innerHTML = "✖";
+    artistElement.appendChild(removeButton);
+    
+    artistsList.appendChild(artistElement);
+    console.log("Added artist '" + artistData.name + "'");
+  }
+  else {
+    console.log("Artist already in list '" + artistData.name + "'");
+  }
+
+  // Check if artist is in local storage array
+  if (!artistsArray.includes(artistData)) {
+    artistsArray.push(artistData);
+    saveArtistsArrayToLocalStorage();
+  }
+}
+
+function showPopup(message, callback) {
+  popupCallback = callback;
+  let popup = document.getElementById("popup-body");
+  popup.style.visibility = "visible";
+  let popupMessage = document.getElementById("popup-message");
+  popupMessage.innerHTML = message;
+}
+
+function hidePopup() {
+  popupCallback = null;
+  let popup = document.getElementById("popup-body");
+  popup.style.visibility = "hidden";
 }
 
 // HTML Template Rendering with basic data binding - demoware only.

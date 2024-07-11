@@ -57,7 +57,11 @@ if (currentToken.access_token) {
   const token = await refreshToken();
   currentToken.save(token);
 
-  userData = await getUserData();
+  userData = JSON.parse(localStorage.getItem("user-data"));
+  if (userData == null) {
+    userData = await getUserData();
+    localStorage.setItem("user-data", JSON.stringify(userData));
+  }
   renderTemplate("main", "logged-in-template", userData);
 
   let lastArtistInput = localStorage.getItem("last-artist-input");
@@ -69,7 +73,6 @@ if (currentToken.access_token) {
   if (artistsArray.length > 0) {
     let artistIds = "";
     artistsArray.forEach((artistData) => {
-      // addArtistToList(artistData);
       artistIds += artistData.id + ",";
     });
 
@@ -85,6 +88,7 @@ if (!currentToken.access_token) {
 }
 
 function loadArtistsArrayFromLocalStorage() {
+  console.log("load artists array");
   artistsArray = JSON.parse(localStorage.getItem("artists-array"));
   if (artistsArray == null) {
     artistsArray = [];
@@ -113,6 +117,7 @@ function updateCreatePlaylistButtonVisibility() {
 }
 
 function saveArtistsArrayToLocalStorage() {
+  console.log("save artists array");
   localStorage.setItem("artists-array", JSON.stringify(artistsArray));
   updateClearButtonVisibility();
   updateCreatePlaylistButtonVisibility();
@@ -166,10 +171,17 @@ async function getToken(code) {
     }),
   });
 
-  return await response.json();
+  if (response.ok) {
+    return await response.json();
+  }
+  else {
+    let errorResponse = await response.json();
+    console.log(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+  }
 }
 
 async function refreshToken() {
+  console.log("refreshToken");
   const response = await fetch(tokenEndpoint, {
     method: 'POST',
     headers: {
@@ -182,19 +194,33 @@ async function refreshToken() {
     }),
   });
 
-  return await response.json();
+  if (response.ok) {
+    return await response.json();
+  }
+  else {
+    let errorResponse = await response.json();
+    console.log(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+  }
 }
 
 async function getUserData() {
+  console.log("getUserData");
   const response = await fetch("https://api.spotify.com/v1/me", {
     method: 'GET',
     headers: { 'Authorization': 'Bearer ' + currentToken.access_token },
   });
 
-  return await response.json();
+  if (response.ok) {
+    return await response.json();
+  }
+  else {
+    let errorResponse = await response.json();
+    console.log(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+  }
 }
 
 async function getSeveralArtists(artistIds) {
+  console.log("getSeveralArtists");
   const response = await fetch("https://api.spotify.com/v1/artists?ids=" + artistIds, {
     method: 'GET',
     headers: { 'Authorization': 'Bearer ' + currentToken.access_token },
@@ -210,6 +236,7 @@ async function getSeveralArtists(artistIds) {
 }
 
 async function getArtist(artistId) {
+  console.log("getArtist");
   const response = await fetch("https://api.spotify.com/v1/artists/" + artistId, {
     method: 'GET',
     headers: { 'Authorization': 'Bearer ' + currentToken.access_token },
@@ -343,7 +370,7 @@ function addArtistToList(artistData) {
   }
 
   // Check if artist is in local storage array
-  if (!artistsArray.includes(artistData)) {
+  if (!artistsArray.some(artist => artist.name == artistData.name)) {
     artistsArray.push(artistData);
     saveArtistsArrayToLocalStorage();
   }

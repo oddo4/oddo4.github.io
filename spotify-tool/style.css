@@ -1,26 +1,28 @@
 body {
-    margin: 1rem;
+    margin: 2rem;
+    padding: 0;
     font-family: Arial, Helvetica, sans-serif;
     color: #fff;
     background-color: #121212;
 }
 
-tr:nth-child(even) {
+th {
+    padding: 0.5rem;
+}
+
+th:first-child {
+    padding-left: 0;
+}
+
+th:last-child {
+    padding-right: 0;
+}
+
+/* tr:nth-child(even) {
     background-color: #eee;
-}
-
-td:first-child {
-    font-weight: bold;
-}
-
-td {
-    white-space: nowrap;
-    padding: 10px;
-    margin-right: 1rem;
-}
+} */
 
 .button {
-    margin: 1rem 0.5rem;
     border: 0;
     border-radius: 20px;
     padding: 10px 1rem;
@@ -30,7 +32,7 @@ td {
     text-transform: capitalize;
     background-color:#1ed760;
     color: #000;
-    transition: transform 0.1s;
+    transition: transform 0.1s, background-color 0.1s;
 }
 
 .button:hover {
@@ -39,7 +41,6 @@ td {
 }
 
 .button-alt {
-    margin: 1rem 0.5rem;
     border: 0;
     border-radius: 20px;
     padding: 10px 1rem;
@@ -56,30 +57,38 @@ td {
     transform: scale(1.05)
 }
 
-input[type=text] {
-    margin: 1rem 0.5rem;
-    min-width: 340px;
-    border: 1px solid #242424;
-    border-radius: 30px;
-    padding: 15px 1rem;
+textarea {
+    margin: 0.5rem 0;
+    width: calc(100% - 2rem - 4px);
+    border: 2px solid;
+    border-color: #242424;
+    border-radius: 10px;
+    padding: 1rem;
     font-size: 0.8rem;
     font-family: Arial, Helvetica, sans-serif;
     font-weight: 600;
     background-color: #242424;
     color: #fff;
     outline: none;
+    transition: background-color 0.1s, border-color 0.1s;
+    resize: none;
 }
 
-input[type=text]:hover {
+textarea:hover {
     background-color: #2a2a2a;
+    border-color: #2a2a2a;
 }
 
-input[type=text]:focus {
-    border: 1px solid #fff;
+textarea:focus {
+    border-color: #fff;
 }
 
 #logged-in {
     display: none;
+}
+
+#create-playlist {
+    visibility: hidden;
 }
 
 #popup-body {
@@ -129,7 +138,9 @@ input[type=text]:focus {
 }
 
 #artists-list {
-    width: 10rem;
+    width: 15rem;
+    margin: 0.5rem 0 0.5rem 1rem;
+    padding: 0;
 }
 
 #artists-list li {
@@ -141,13 +152,13 @@ input[type=text]:focus {
 }
 
 .remove-button {
-    margin: 0;
+    margin: 0.25rem 0.5rem 0.25rem 0;
     padding: 0.55rem 0.8rem;
-    float: right;
+    float: left;
     font-size: 1rem;
     font-weight: 600;
     color: #6a6a6a;
-    transition: all 0.1s;
+    transition: transform 0.1s, background-color 0.1s, color 0.1s;
 }
 
 .remove-button:hover {

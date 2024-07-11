@@ -29,6 +29,7 @@ const currentToken = {
 const args = new URLSearchParams(window.location.search);
 const code = args.get('code');
 
+var userData;
 var artistsArray = [];
 var popupCallback;
 
@@ -56,7 +57,7 @@ if (currentToken.access_token) {
   const token = await refreshToken();
   currentToken.save(token);
 
-  const userData = await getUserData();
+  userData = await getUserData();
   renderTemplate("main", "logged-in-template", userData);
 
   let lastArtistInput = localStorage.getItem("last-artist-input");
@@ -66,15 +67,21 @@ if (currentToken.access_token) {
 
   loadArtistsArrayFromLocalStorage();
   if (artistsArray.length > 0) {
+    let artistIds = "";
     artistsArray.forEach((artistData) => {
-      addArtistToList(artistData);
+      // addArtistToList(artistData);
+      artistIds += artistData.id + ",";
     });
+
+    if (artistIds) {
+      loadArtistsToList(artistIds);
+    }
   }
 }
 
 // Otherwise we're not logged in, so render the login template
 if (!currentToken.access_token) {
-  renderTemplate("main", "login");
+  renderTemplate("main", "login-template");
 }
 
 function loadArtistsArrayFromLocalStorage() {
@@ -84,6 +91,7 @@ function loadArtistsArrayFromLocalStorage() {
   }
 
   updateClearButtonVisibility();
+  updateCreatePlaylistButtonVisibility();
 }
 
 function updateClearButtonVisibility() {
@@ -95,9 +103,19 @@ function updateClearButtonVisibility() {
   }
 }
 
+function updateCreatePlaylistButtonVisibility() {
+  if (artistsArray.length > 0) {
+    document.getElementById("create-playlist-button").style.visibility = "visible";
+  }
+  else {
+    document.getElementById("create-playlist-button").style.visibility = "hidden";
+  }
+}
+
 function saveArtistsArrayToLocalStorage() {
   localStorage.setItem("artists-array", JSON.stringify(artistsArray));
   updateClearButtonVisibility();
+  updateCreatePlaylistButtonVisibility();
 }
 
 async function redirectToSpotifyAuthorize() {
@@ -176,6 +194,21 @@ async function getUserData() {
   return await response.json();
 }
 
+async function getSeveralArtists(artistIds) {
+  const response = await fetch("https://api.spotify.com/v1/artists?ids=" + artistIds, {
+    method: 'GET',
+    headers: { 'Authorization': 'Bearer ' + currentToken.access_token },
+  });
+
+  if (response.ok) {
+    return await response.json();
+  }
+  else {
+    let errorResponse = await response.json();
+    console.log(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+  }
+}
+
 async function getArtist(artistId) {
   const response = await fetch("https://api.spotify.com/v1/artists/" + artistId, {
     method: 'GET',
@@ -190,6 +223,21 @@ async function getArtist(artistId) {
     console.log(errorResponse.error.message + " (" + errorResponse.error.status + ")");
   }
 }
+
+// async function getArtist(artistId) {
+//   const response = await fetch("https://api.spotify.com/v1/artists/" + artistId, {
+//     method: 'GET',
+//     headers: { 'Authorization': 'Bearer ' + currentToken.access_token },
+//   });
+
+//   if (response.ok) {
+//     return await response.json();
+//   }
+//   else {
+//     let errorResponse = await response.json();
+//     console.log(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+//   }
+// }
 
 // Click handlers
 async function loginWithSpotifyClick() {
@@ -211,23 +259,22 @@ async function addArtistClick() {
   let artistInput = document.getElementById("artist-id-input").value.replace("https://open.spotify.com/artist/", "");
   localStorage.setItem("last-artist-input", artistInput);
   
-  let parseMultiInput = artistInput.replace(/\s+/g, "").split(",");
-  parseMultiInput.forEach(async (input) => {
-    let artistDataResponse = await getArtist(input);
-    if (artistDataResponse) {
-      addArtistToList(artistDataResponse);
-    }
-  });
+  let artistDataResponse = await getSeveralArtists(artistInput);
+  if (artistDataResponse != null && artistDataResponse.artists.length > 0) {
+    artistDataResponse.artists.forEach((artist) => {
+      addArtistToList(artist);
+    });
+  }
 }
 
 function removeArtistClick(artistId) {
-  console.log("Remove '" + artistId + "'");
+  // console.log("Remove '" + artistId + "'");
   let artistData = artistsArray.find((artist) => artist.id == artistId);
   if (artistData == null) {
     return;
   }
 
-  showPopup("Remove '" + artistData.name + "'?", function () {
+  showPopup("Remove '" + artistData.name + "' from the list?", function () {
     artistsArray.splice(artistsArray.indexOf(artistData), 1);
 
     let artistsList = document.getElementById("artists-list");
@@ -241,7 +288,7 @@ function removeArtistClick(artistId) {
 }
 
 function clearListClick() {
-  showPopup("Clear list?", function () {
+  showPopup("Clear artists list?", function () {
     let artistElement = document.getElementById("artists-list");
     artistElement.replaceChildren();
     artistsArray = [];
@@ -259,6 +306,15 @@ function popupConfirmClick() {
 
 function popupCancelClick() {
   hidePopup();
+}
+
+async function loadArtistsToList(artistIds) {
+  let artistDataResponse = await getSeveralArtists(artistIds);
+  if (artistDataResponse != null && artistDataResponse.artists.length > 0) {
+    artistDataResponse.artists.forEach((artist) => {
+      addArtistToList(artist);
+    });
+  }
 }
 
 function addArtistToList(artistData) {
@@ -305,6 +361,16 @@ function hidePopup() {
   popupCallback = null;
   let popup = document.getElementById("popup-body");
   popup.style.visibility = "hidden";
+}
+
+function showCreatePlaylistButton() {
+  let button = document.getElementById("create-playlist-button");
+  button.style.visibility = "visible";
+}
+
+function hideCreatePlaylistButton() {
+  let button = document.getElementById("create-playlist-button");
+  button.style.visibility = "hidden";
 }
 
 // HTML Template Rendering with basic data binding - demoware only.

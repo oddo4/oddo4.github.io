@@ -9,24 +9,38 @@
     <div id="main"></div>
     <div id="oauth"></div>
 
-    <template id="login">
+    <template id="login-template">
         <h1>Spotify Tool</h1>
         <button id="login-button" class="button" data-bind-onclick="loginWithSpotifyClick();"> Log in with Spotify </button>
     </template>
 
     <template id="logged-in-template">
-        <h1>Logged in as <span data-bind="display_name"></span></h1>
+        <h1>Spotify Tool</h1>
         <div>
-            <button id="refresh-token-button" class="button" data-bind-onclick="refreshTokenClick();">Refresh Token</button>
-            <button id="logout-button" class="button" data-bind-onclick="logoutClick();">Log out</button>
+            <h2 data-bind="display_name"></h2>
+            <table>
+                <tr>
+                    <th><button id="refresh-token-button" class="button" data-bind-onclick="refreshTokenClick();">Refresh Token</button></th>
+                    <th><button id="logout-button" class="button" data-bind-onclick="logoutClick();">Log out</button></th>
+                </tr>
+            </table>
         </div>
         <div>
-            <input type="text" id="artist-id-input" placeholder="Insert Artist ID here..."><br>
-            <button id="add-artist-button" class="button" data-bind-onclick="addArtistClick()">Add Artist</button>
-            <button id="clear-list-button" class="button" data-bind-onclick="clearListClick()">Clear List</button>
+            <textarea id="artist-id-input" placeholder="Insert Artist ID here..." rows="4"></textarea><br>
+            <table>
+                <tr>
+                    <th><button id="add-artist-button" class="button" data-bind-onclick="addArtistClick()">Add Artist</button></th>
+                    <th><button id="clear-list-button" class="button" data-bind-onclick="clearListClick()">Clear List</button></th>
+                </tr>
+            </table>
         </div>
         <div>
             <h2>List of artists</h2>
+            <table>
+                <tr>
+                    <th><button id="create-playlist-button" class="button" data-bind-onclick="createPlaylist()">Create Playlist</button></th>
+                </tr>
+            </table>
             <ul id="artists-list">
             </ul>
         </div>
@@ -34,8 +48,12 @@
             <div id="popup-content">
                 <h2 id="popup-message">You sure?</h2>
                 <div id="popup-choices">
-                    <button id="popup-cancel-button" class="button-alt" data-bind-onclick="popupCancelClick()">Cancel</button>
-                    <button id="popup-confirm-button" class="button" data-bind-onclick="popupConfirmClick()">Confirm</button>
+                    <table>
+                        <tr>
+                            <th><button id="popup-cancel-button" class="button-alt" data-bind-onclick="popupCancelClick()">Cancel</button></th>
+                            <th><button id="popup-confirm-button" class="button" data-bind-onclick="popupConfirmClick()">Confirm</button></th>
+                        </tr>
+                    </table>
                 </div>
             </div>
             <button id="popup-blocker" data-bind-onclick="popupCancelClick()"></button>

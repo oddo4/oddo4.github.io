@@ -1,5 +1,5 @@
 const clientId = '260263b1f55c4d6e850c2fe3cab1bb59'; // your clientId
-const redirectUrl = 'http://localhost:5500/spotify-tool/'; // https://oddo4.github.io/spotify-tool/
+const redirectUrl = window.location.href.includes("localhost") ? 'http://localhost:5500/spotify-tool/' : 'https://oddo4.github.io/spotify-tool/'; //'http://localhost:5500/spotify-tool/' // 'https://oddo4.github.io/spotify-tool/'
 
 const authorizationEndpoint = "https://accounts.spotify.com/authorize";
 const tokenEndpoint = "https://accounts.spotify.com/api/token";

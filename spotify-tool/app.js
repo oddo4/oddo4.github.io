@@ -3,7 +3,7 @@ const redirectUrl = 'http://localhost:5500/spotify-tool/'; // https://oddo4.gith
 
 const authorizationEndpoint = "https://accounts.spotify.com/authorize";
 const tokenEndpoint = "https://accounts.spotify.com/api/token";
-const scope = 'user-read-private user-read-email user-follow-read';
+const scope = 'user-read-private user-read-email user-follow-read playlist-modify-public playlist-modify-private';
 
 // Data structure that manages the current active token, caching it in localStorage
 const currentToken = {
@@ -31,11 +31,13 @@ const code = args.get('code');
 
 var userData;
 var artistsArray = [];
+var trackDatasArray = [];
 var popupCallback;
+var createPlaylistInProgress = false;
 
 // If we find a code, we're in a callback, do a token exchange
 if (code) {
-  const token = await getToken(code);
+  const token = await apiGetToken(code);
   currentToken.save(token);
 
   // Remove code from URL so we can refresh correctly.
@@ -54,12 +56,12 @@ if (currentToken.access_token) {
     logoutClick();
   }
 
-  const token = await refreshToken();
+  const token = await apiRefreshToken();
   currentToken.save(token);
 
   userData = JSON.parse(localStorage.getItem("user-data"));
   if (userData == null) {
-    userData = await getUserData();
+    userData = await apiGetUserData();
     localStorage.setItem("user-data", JSON.stringify(userData));
   }
   renderTemplate("main", "logged-in-template", userData);
@@ -71,14 +73,7 @@ if (currentToken.access_token) {
 
   loadArtistsArrayFromLocalStorage();
   if (artistsArray.length > 0) {
-    let artistIds = "";
-    artistsArray.forEach((artistData) => {
-      artistIds += artistData.id + ",";
-    });
-
-    if (artistIds) {
-      loadArtistsToList(artistIds);
-    }
+    loadArtistsArrayToList();
   }
 }
 
@@ -154,7 +149,9 @@ async function redirectToSpotifyAuthorize() {
 }
 
 // Soptify API Calls
-async function getToken(code) {
+async function apiGetToken(code) {
+  console.log("API Call: getToken");
+
   const code_verifier = localStorage.getItem('code_verifier');
 
   const response = await fetch(tokenEndpoint, {
@@ -176,12 +173,14 @@ async function getToken(code) {
   }
   else {
     let errorResponse = await response.json();
-    console.log(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+    console.error(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+    return null;
   }
 }
 
-async function refreshToken() {
-  console.log("refreshToken");
+async function apiRefreshToken() {
+  console.log("API Call: refreshToken");
+
   const response = await fetch(tokenEndpoint, {
     method: 'POST',
     headers: {
@@ -199,15 +198,19 @@ async function refreshToken() {
   }
   else {
     let errorResponse = await response.json();
-    console.log(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+    console.error(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+    return null;
   }
 }
 
-async function getUserData() {
-  console.log("getUserData");
+async function apiGetUserData() {
+  console.log("API Call: getUserData");
+
   const response = await fetch("https://api.spotify.com/v1/me", {
     method: 'GET',
-    headers: { 'Authorization': 'Bearer ' + currentToken.access_token },
+    headers: {
+      'Authorization': 'Bearer ' + currentToken.access_token
+    },
   });
 
   if (response.ok) {
@@ -215,15 +218,19 @@ async function getUserData() {
   }
   else {
     let errorResponse = await response.json();
-    console.log(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+    console.error(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+    return null;
   }
 }
 
-async function getSeveralArtists(artistIds) {
-  console.log("getSeveralArtists");
+async function apiGetSeveralArtists(artistIds) {
+  console.log("API Call: getSeveralArtists");
+
   const response = await fetch("https://api.spotify.com/v1/artists?ids=" + artistIds, {
     method: 'GET',
-    headers: { 'Authorization': 'Bearer ' + currentToken.access_token },
+    headers: {
+      'Authorization': 'Bearer ' + currentToken.access_token
+    },
   });
 
   if (response.ok) {
@@ -231,15 +238,19 @@ async function getSeveralArtists(artistIds) {
   }
   else {
     let errorResponse = await response.json();
-    console.log(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+    console.error(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+    return null;
   }
 }
 
-async function getArtist(artistId) {
-  console.log("getArtist");
+async function apiGetArtist(artistId) {
+  console.log("API Call: getArtist");
+
   const response = await fetch("https://api.spotify.com/v1/artists/" + artistId, {
     method: 'GET',
-    headers: { 'Authorization': 'Bearer ' + currentToken.access_token },
+    headers: {
+      'Authorization': 'Bearer ' + currentToken.access_token
+    },
   });
 
   if (response.ok) {
@@ -247,24 +258,115 @@ async function getArtist(artistId) {
   }
   else {
     let errorResponse = await response.json();
-    console.log(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+    console.error(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+    return null;
   }
 }
 
-// async function getArtist(artistId) {
-//   const response = await fetch("https://api.spotify.com/v1/artists/" + artistId, {
-//     method: 'GET',
-//     headers: { 'Authorization': 'Bearer ' + currentToken.access_token },
-//   });
+async function apiGetArtistsAlbums(artistId, nextCall) {
+  console.log("API Call: getArtistsAlbum");
 
-//   if (response.ok) {
-//     return await response.json();
-//   }
-//   else {
-//     let errorResponse = await response.json();
-//     console.log(errorResponse.error.message + " (" + errorResponse.error.status + ")");
-//   }
-// }
+  let includeGroups = "single,album";
+  let limit = "50";
+  let request = "https://api.spotify.com/v1/artists/" + artistId + "/albums?include_groups=" + includeGroups + "&limit=" + limit;
+  if (nextCall) {
+    request = nextCall;
+  }
+  const response = await fetch(request, {
+    method: 'GET',
+    headers: {
+      'Authorization': 'Bearer ' + currentToken.access_token
+    },
+  });
+
+  if (response.ok) {
+    return await response.json();
+  }
+  else {
+    let errorResponse = await response.json();
+    console.error(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+    return null;
+  }
+}
+
+async function apiGetAlbumTracks(albumId, nextCall) {
+  console.log("API Call: getAlbumTracks");
+
+  let limit = "50";
+  let request = "https://api.spotify.com/v1/albums/" + albumId + "/tracks?limit=" + limit;
+  if (nextCall) {
+    request = nextCall;
+  }
+  const response = await fetch(request, {
+    method: 'GET',
+    headers: {
+      'Authorization': 'Bearer ' + currentToken.access_token
+    },
+  });
+
+  if (response.ok) {
+    return await response.json();
+  }
+  else {
+    let errorResponse = await response.json();
+    console.error(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+    return null;
+  }
+}
+
+async function apiCreatePlaylist(userId, playlistName, playlistDescription) {
+  console.log("API Call: createPlaylist");
+
+  const response = await fetch("https://api.spotify.com/v1/users/" + userId + "/playlists", {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + currentToken.access_token,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(
+      {
+        name: playlistName,
+        description: playlistDescription,
+        public: false
+      }
+    ),
+  });
+
+  if (response.ok) {
+    return await response.json();
+  }
+  else {
+    let errorResponse = await response.json();
+    console.error(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+    return null;
+  }
+}
+
+async function apiAddItemsToPlaylist(playlistId, urisObject) {
+  console.log("API Call: addItemsToPlaylist");
+
+  const response = await fetch("https://api.spotify.com/v1/playlists/" + playlistId + "/tracks", {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + currentToken.access_token,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(
+      {
+        uris: urisObject
+      }
+    ),
+  });
+
+  if (response.ok) {
+    return await response.json();
+  }
+  else {
+    let errorResponse = await response.json();
+    console.error(errorResponse.error.message + " (" + errorResponse.error.status + ")");
+    return null;
+  }
+}
 
 // Click handlers
 async function loginWithSpotifyClick() {
@@ -277,7 +379,11 @@ async function logoutClick() {
 }
 
 async function refreshTokenClick() {
-  const token = await refreshToken();
+  if (createPlaylistInProgress) {
+    return;
+  }
+
+  const token = await apiRefreshToken();
   currentToken.save(token);
   window.location.reload();
 }
@@ -286,7 +392,7 @@ async function addArtistClick() {
   let artistInput = document.getElementById("artist-id-input").value.replace("https://open.spotify.com/artist/", "");
   localStorage.setItem("last-artist-input", artistInput);
   
-  let artistDataResponse = await getSeveralArtists(artistInput);
+  let artistDataResponse = await apiGetSeveralArtists(artistInput);
   if (artistDataResponse != null && artistDataResponse.artists.length > 0) {
     artistDataResponse.artists.forEach((artist) => {
       addArtistToList(artist);
@@ -298,6 +404,7 @@ function removeArtistClick(artistId) {
   // console.log("Remove '" + artistId + "'");
   let artistData = artistsArray.find((artist) => artist.id == artistId);
   if (artistData == null) {
+    console.error("Artist ID not found in array!");
     return;
   }
 
@@ -323,6 +430,74 @@ function clearListClick() {
   });
 }
 
+async function createPlaylistClick() {
+  let maxProgress = 100;
+  let percentage = maxProgress * 0.75;
+
+  showCreatePlaylistProgress();
+  setButtonsActive(false);
+  setCreatePlaylistProgressValue(0);
+
+  trackDatasArray = [];
+  let totalNumOfArtists = artistsArray.length;
+  for (let i = 0; i < totalNumOfArtists; i++) {
+    await getAndAddTracksToList(artistsArray[i], i, totalNumOfArtists, percentage);
+    setCreatePlaylistProgressValue((i + 1) / totalNumOfArtists * percentage);
+  }
+
+  let urisObject = getUrisObject();
+  if (urisObject == null) {
+    console.error("Failed to create playlist! (Uris empty)")
+    return;
+  }
+
+  console.log(urisObject);
+  let playlistDescription = "Playlist generated through Spotify Tool. (";
+  artistsArray.forEach((artist) => {
+    playlistDescription += artist.name + ", ";
+  })
+  playlistDescription = playlistDescription.slice(0, -2);
+  playlistDescription += ")";
+
+  let playlistResponse = await apiCreatePlaylist(userData.id, "Spotify Tool", playlistDescription);
+  if (playlistResponse == null) {
+    return;
+  }
+
+  console.log(playlistResponse);
+
+  if (urisObject.length > 100) {
+    let totalUris = urisObject.length;
+    let totalNumOfCalls = Math.ceil(totalUris / 100);
+    let position = 0;
+    let nextNumOfObjects = 100;
+    for (let i = 0; i < totalNumOfCalls; i++) {
+      let trimmedUrisObject = urisObject.slice(position, position + nextNumOfObjects);
+      console.log(trimmedUrisObject);
+      let addToPlaylistResponse = await apiAddItemsToPlaylist(playlistResponse.id, trimmedUrisObject);
+      if (addToPlaylistResponse == null) {
+        return;
+      }
+
+      position += 100;
+      setCreatePlaylistProgressValue(percentage + ((i + 1) / totalNumOfCalls * percentage));
+    }
+  }
+  else {
+    let addToPlaylistResponse = await apiAddItemsToPlaylist(playlistResponse.id, urisObject);
+    if (addToPlaylistResponse == null) {
+      return;
+    }
+  }
+  
+  setCreatePlaylistProgressValue(maxProgress);
+
+  hideCreatePlaylistProgress();
+  setButtonsActive(true);
+
+  console.log("Playlist created successfully!");
+}
+
 function popupConfirmClick() {
   if (popupCallback != null) {
     popupCallback();
@@ -335,10 +510,9 @@ function popupCancelClick() {
   hidePopup();
 }
 
-async function loadArtistsToList(artistIds) {
-  let artistDataResponse = await getSeveralArtists(artistIds);
-  if (artistDataResponse != null && artistDataResponse.artists.length > 0) {
-    artistDataResponse.artists.forEach((artist) => {
+async function loadArtistsArrayToList() {
+  if (artistsArray != null && artistsArray.length > 0) {
+    artistsArray.forEach((artist) => {
       addArtistToList(artist);
     });
   }
@@ -376,28 +550,155 @@ function addArtistToList(artistData) {
   }
 }
 
+async function getAndAddTracksToList(artistData, index, total, percentage) {
+  let artistAlbumIds = await getAlbumIds(artistData.id);
+  
+  if (artistAlbumIds == null || artistAlbumIds.length == 0) {
+    console.error("Failed to create playlist! (Albums empty.)");
+    return;
+  }
+
+  let totalNumOfAlbums = artistAlbumIds.length;
+  for (let i = 0; i < totalNumOfAlbums; i++) {
+    let albumTrackDatas = await getTrackDatas(artistAlbumIds[i]);
+    trackDatasArray = trackDatasArray.concat(albumTrackDatas);
+    setCreatePlaylistProgressValue(((index / total) + ((i + 1) / totalNumOfAlbums / total)) * percentage);
+  };
+
+  if (trackDatasArray == null || trackDatasArray.length == 0) {
+    console.error("Failed to create playlist! (Tracks empty.)");
+    return;
+  }
+}
+
+async function getAlbumIds(artistId) {
+  let albumIds = [];
+  let firstResponse = await apiGetArtistsAlbums(artistId);
+  
+  if (firstResponse == null) {
+    return null;
+  }
+
+  console.log(firstResponse);
+
+  let nextCall = firstResponse.next;
+  
+  firstResponse.items.forEach((album) => {
+    albumIds.push(album.id);
+  });
+
+  while (nextCall != null) {
+    let nextResponse = await apiGetArtistsAlbums(artistId, nextCall);
+    
+    if (nextResponse == null) {
+      break;
+    }
+
+    console.log(nextResponse);
+
+    nextResponse.items.forEach((album) => {
+      albumIds.push(album.id);
+    });
+
+    nextCall = nextResponse.next;
+  }
+
+  return albumIds;
+}
+
+async function getTrackDatas(albumId) {
+  let trackDatas = [];
+  let firstResponse = await apiGetAlbumTracks(albumId);
+  
+  if (firstResponse == null) {
+    return null;
+  }
+
+  console.log(firstResponse);
+
+  let nextCall = firstResponse.next;
+  
+  firstResponse.items.forEach((track) => {
+    if (!trackDatasArray.find((existingTrack) => existingTrack.name == track.name)) {
+      trackDatas.push(track);
+    }
+  });
+
+  while (nextCall != null) {
+    let nextResponse = await apiGetAlbumTracks(albumId, nextCall);
+    
+    if (nextResponse == null) {
+      break;
+    }
+
+    console.log(nextResponse);
+
+    nextResponse.items.forEach((track) => {
+      if (!trackDatasArray.find((existingTrack) => existingTrack.name == track.name)) {
+        trackDatas.push(track);
+      }
+    });
+
+    nextCall = nextResponse.next;
+  }
+
+  return trackDatas;
+}
+
+function getUrisObject() {
+  	if (trackDatasArray == null || trackDatasArray.length == 0) {
+      return null;
+    }
+
+    let uris = [];
+    let prefixType = "spotify:track:";
+    trackDatasArray.forEach((trackData) => {
+      uris.push(prefixType + trackData.id);
+    });
+
+    return uris;
+}
+
 function showPopup(message, callback) {
   popupCallback = callback;
-  let popup = document.getElementById("popup-body");
-  popup.style.visibility = "visible";
-  let popupMessage = document.getElementById("popup-message");
-  popupMessage.innerHTML = message;
+  document.getElementById("popup-body").style.visibility = "visible";
+  document.getElementById("popup-message").innerHTML = message;
 }
 
 function hidePopup() {
   popupCallback = null;
-  let popup = document.getElementById("popup-body");
-  popup.style.visibility = "hidden";
+  document.getElementById("popup-body").style.visibility = "hidden";
 }
 
 function showCreatePlaylistButton() {
-  let button = document.getElementById("create-playlist-button");
-  button.style.visibility = "visible";
+  document.getElementById("create-playlist-button").style.visibility = "visible";
 }
 
 function hideCreatePlaylistButton() {
-  let button = document.getElementById("create-playlist-button");
-  button.style.visibility = "hidden";
+  document.getElementById("create-playlist-button").style.visibility = "hidden";
+}
+
+function showCreatePlaylistProgress() {
+  document.getElementById("create-playlist-progress").style.visibility = "visible";
+}
+
+function hideCreatePlaylistProgress() {
+  document.getElementById("create-playlist-progress").style.visibility = "hidden";
+}
+
+function setCreatePlaylistProgressValue(value) {
+  document.getElementById("create-playlist-progress").value = value;
+}
+
+function setButtonsActive(active) {
+  document.getElementById("refresh-token-button").disabled = !active;
+  document.getElementById("add-artist-button").disabled = !active;
+  document.getElementById("clear-list-button").disabled = !active;
+  document.getElementById("create-playlist-button").disabled = !active;
+  let removeButtons = document.getElementsByClassName("remove-button");
+  for (let i = 0; i < removeButtons.length; i++) {
+    removeButtons[i].disabled = !active;
+  }
 }
 
 // HTML Template Rendering with basic data binding - demoware only.
@@ -406,10 +707,10 @@ function renderTemplate(targetId, templateId, data = null) {
   const clone = template.content.cloneNode(true);
 
   const elements = clone.querySelectorAll("*");
-  elements.forEach(ele => {
+  elements.forEach((ele) => {
     const bindingAttrs = [...ele.attributes].filter(a => a.name.startsWith("data-bind"));
 
-    bindingAttrs.forEach(attr => {
+    bindingAttrs.forEach((attr) => {
       const target = attr.name.replace(/data-bind-/, "").replace(/data-bind/, "");
       const targetType = target.startsWith("onclick") ? "HANDLER" : "PROPERTY";
       const targetProp = target === "" ? "innerHTML" : target;

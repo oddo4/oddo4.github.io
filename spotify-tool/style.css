@@ -1,8 +1,12 @@
+* {
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: 800;
+    color: #fff;
+}
+
 body {
     margin: 2rem;
     padding: 0;
-    font-family: Arial, Helvetica, sans-serif;
-    color: #fff;
     background-color: #121212;
 }
 
@@ -18,17 +22,12 @@ th:last-child {
     padding-right: 0;
 }
 
-/* tr:nth-child(even) {
-    background-color: #eee;
-} */
-
 .button {
     border: 0;
     border-radius: 20px;
     padding: 10px 1rem;
     font-size: 0.8rem;
     font-family: Arial, Helvetica, sans-serif;
-    font-weight: 750;
     text-transform: capitalize;
     background-color:#1ed760;
     color: #000;
@@ -37,16 +36,21 @@ th:last-child {
 
 .button:hover {
     background-color: #1fdf64;
-    transform: scale(1.05)
+    transform: scale(1.05);
+    cursor: pointer;
+}
+
+.button:disabled {
+    background-color: #1fdf657f;
+    transform: scale(1);
+    cursor: not-allowed;
 }
 
 .button-alt {
     border: 0;
-    border-radius: 20px;
     padding: 10px 1rem;
     font-size: 0.8rem;
     font-family: Arial, Helvetica, sans-serif;
-    font-weight: 750;
     text-transform: capitalize;
     background: none;
     color: #000;
@@ -55,6 +59,12 @@ th:last-child {
 
 .button-alt:hover {
     transform: scale(1.05)
+}
+
+.button-alt:disabled {
+    background-color: #0000007f;
+    transform: scale(1);
+    cursor: not-allowed;
 }
 
 textarea {
@@ -66,7 +76,6 @@ textarea {
     padding: 1rem;
     font-size: 0.8rem;
     font-family: Arial, Helvetica, sans-serif;
-    font-weight: 600;
     background-color: #242424;
     color: #fff;
     outline: none;
@@ -87,8 +96,79 @@ textarea:focus {
     display: none;
 }
 
-#create-playlist {
+#create-playlist-button {
     visibility: hidden;
+    min-width: 9rem;
+}
+
+#create-playlist-progress {
+    visibility: hidden;
+}
+
+#th-progress {
+    width: 100%;
+}
+
+progress[value] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border: none;
+    width: 100%;
+    height: 38px;
+    background-color: #242424;
+    border-radius: 20px;
+}
+
+progress[value]::-webkit-progress-bar {
+    background-color: #242424;
+    border-radius: 20px;
+}
+
+progress[value]::-webkit-progress-value {
+    background-color: #fff;
+    border-radius: 20px;
+}
+
+progress[value]::-moz-progress-bar {
+    background-color: #fff;
+    border-radius: 20px;
+}
+
+#artists-list {
+    width: 15rem;
+    margin: 0.5rem 0 0.5rem 1rem;
+    padding: 0;
+}
+
+#artists-list li {
+    list-style-type: none;
+    margin: 0;
+    line-height: 3rem;
+    font-size: 0.8rem;
+}
+
+.remove-button {
+    position: static;
+    margin: 0.25rem 0.5rem 0.25rem 0;
+    padding: 0.5rem 0.8rem;
+    float: left;
+    font-size: 1rem;
+    background-color: transparent;
+    color: #6a6a6a;
+    transition: transform 0.1s, background-color 0.1s, color 0.1s;
+}
+
+.remove-button:hover {
+    background-color: #242424;
+    color:  #fff;
+}
+
+.remove-button:disabled {
+    background-color: transparent;
+    color: #6a6a6a7f;
+    transform: scale(1);
+    cursor: not-allowed;
 }
 
 #popup-body {
@@ -135,33 +215,4 @@ textarea:focus {
     right: 0;
     bottom: 0;
     left: 0;
-}
-
-#artists-list {
-    width: 15rem;
-    margin: 0.5rem 0 0.5rem 1rem;
-    padding: 0;
-}
-
-#artists-list li {
-    list-style-type: none;
-    margin: 0;
-    line-height: 3rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-.remove-button {
-    margin: 0.25rem 0.5rem 0.25rem 0;
-    padding: 0.55rem 0.8rem;
-    float: left;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #6a6a6a;
-    transition: transform 0.1s, background-color 0.1s, color 0.1s;
-}
-
-.remove-button:hover {
-    background-color: #242424;
-    color:  #fff;
 }

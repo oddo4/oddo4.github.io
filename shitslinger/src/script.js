@@ -59,6 +59,8 @@ gui.add(debugObject, 'reset')
 //#endregion Debug
 //*/
 
+// Constants
+const path = 'shitslinger/docs/'
 //#region Physics
 // World
 const world = new CANNON.World()
@@ -148,7 +150,7 @@ let empusaModel = new THREE.Group()
 
 function loadModels() {
     gltfLoader.load(
-        '/models/empusa/empusa.gltf',
+        path + '/models/empusa/empusa.gltf',
         (gltf) =>
         {
             let dummy = new THREE.Object3D()
@@ -182,7 +184,7 @@ function loadModels() {
 const fontLoader = new THREE.FontLoader()
 let easyModeText, hardModeText, easyModeBody, hardModeBody
 fontLoader.load(
-    '/fonts/helvetiker_regular.typeface.json',
+    path + '/fonts/helvetiker_regular.typeface.json',
     (font) =>
     {
         const easyTextGeometry = new THREE.TextGeometry(
@@ -250,11 +252,11 @@ fontLoader.load(
 //#endregion
 
 //#region Sounds
-const hitSound = new Audio('/sounds/hit.ogg')
-const gunShotSound = new Audio('/sounds/gun_shot.ogg')
-const allRightSound = new Audio('/sounds/all_right.ogg')
-const showdownSound = new Audio('/sounds/showdown.ogg')
-const deathSound = new Audio('/sounds/death.ogg')
+const hitSound = new Audio(path + '/sounds/hit.ogg')
+const gunShotSound = new Audio(path + '/sounds/gun_shot.ogg')
+const allRightSound = new Audio(path + '/sounds/all_right.ogg')
+const showdownSound = new Audio(path + '/sounds/showdown.ogg')
+const deathSound = new Audio(path + '/sounds/death.ogg')
 
 function playHitSound(collision) {
     playSound(hitSound, 0.3)
